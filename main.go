@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +13,10 @@ import (
 )
 
 func main() {
+	port := flag.Int("port", 5576, "listen port")
+	flag.Parse()
+	addr := fmt.Sprintf(":%d", *port)
+
 	// 根路径用于最简单的存活探测。
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "ok")
@@ -40,20 +45,18 @@ func main() {
 
 		player := NewPlayer(r.Header, t, c, url)
 
-		// 这里不做 panic 恢复，尽量把错误按正常流程返回并记录日志。
 		if err := player.Play(w, r.Context()); err != nil {
 			log.Printf("播放错误: %v", err)
-			// 一旦已经开始写响应体，就不要再额外写错误响应，避免破坏数据流。
 		}
 	})
 
-	// 健康检查接口，方便上层轮询代理是否正常可用。
+	// 健康检查接口。
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"status": "healthy", "type": "go", "port": %d, "timestamp": "%s"}`, 5575, time.Now().Format(time.RFC3339))
+		fmt.Fprintf(w, `{"status": "healthy", "type": "go", "port": %d, "timestamp": "%s"}`, *port, time.Now().Format(time.RFC3339))
 	})
 
 	log.SetOutput(os.Stdout)
-	log.Printf("服务器启动在 :5575")
-	log.Fatal(http.ListenAndServe(":5575", nil))
+	log.Printf("服务器启动在 " + addr)
+	log.Fatal(http.ListenAndServe(addr, nil))
 }

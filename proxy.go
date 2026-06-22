@@ -129,10 +129,14 @@ func (p *Player) Play(w http.ResponseWriter, ctx context.Context) error {
 				downloadCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 				defer cancel()
 
+				// 加 skip 偏移到请求位置，跳过伪装头部
+				serverStart := cs + p.skip
+				serverEnd := ce + p.skip
+
 				var data []byte
 				var err error
 				for retry := 0; retry < 3; retry++ {
-					data, _, _, err = p.downloadChunk(downloadCtx, cs, ce, 3)
+					data, _, _, err = p.downloadChunk(downloadCtx, serverStart, serverEnd, 3)
 					if err == nil {
 						break
 					}
@@ -256,14 +260,15 @@ func (p *Player) downloadChunk(ctx context.Context, start, end int64, maxRetries
 			}
 			continue
 		}
-		defer resp.Body.Close()
+
+		data, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			lastErr = err
+			continue
+		}
 
 		if resp.StatusCode == 206 || resp.StatusCode == 200 {
-			data, err := io.ReadAll(resp.Body)
-			if err != nil {
-				lastErr = err
-				continue
-			}
 			return data, resp.Header, resp.StatusCode, nil
 		}
 
@@ -307,15 +312,10 @@ func handleImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contentType := resp.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "image/jpeg"
+	for k, v := range resp.Header {
+		w.Header()[k] = v
 	}
-
-	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
-	w.Header().Set("Cache-Control", "public, max-age=86400")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(resp.StatusCode)
 	w.Write(data)
 }
 

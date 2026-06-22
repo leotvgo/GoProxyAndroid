@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	port := flag.Int("port", 5576, "listen port")
+	port := flag.Int("port", 5859, "listen port")
 	flag.Parse()
 	addr := fmt.Sprintf(":%d", *port)
 

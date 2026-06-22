@@ -195,8 +195,6 @@ func setupRoutes() {
 		}
 	})
 
-	http.HandleFunc("/img", handleImage)
-
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		serverMu.Lock()

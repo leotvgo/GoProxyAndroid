@@ -56,8 +56,6 @@ func main() {
 		}
 	})
 
-	http.HandleFunc("/img", handleImage)
-
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"status": "healthy", "type": "go", "port": %d, "timestamp": "%s"}`, *port, time.Now().Format(time.RFC3339))
